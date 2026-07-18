@@ -1,0 +1,11 @@
+:80 {
+	# Backend API - everything the frontend calls under /songs/*.
+	handle /songs/* {
+		reverse_proxy localhost:8000
+	}
+
+	# Everything else (pages, /_next/static, favicon, etc.) goes to Next.js.
+	handle {
+		reverse_proxy localhost:3000
+	}
+}

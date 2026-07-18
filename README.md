@@ -27,8 +27,9 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 Backend runs at `http://localhost:8000` (interactive docs at `/docs`). SQLite DB is created at
-`backend/app.db` on first run. Uploaded files and generated artifacts are saved under
-`backend/storage/songs/{song_id}/`.
+`backend/storage/app.db` on first run. Uploaded files and generated artifacts are saved under
+`backend/storage/songs/{song_id}/`. (Everything lives under `storage/` so a single volume mount
+covers all persistent state — see Deployment below.)
 
 Notes on first run:
 - `demucs` (source separation) and `faster-whisper` (transcription) download their models the
@@ -87,6 +88,71 @@ Recordings that are too short or near-silent are rejected with a clear error rat
 - `GET /songs/{song_id}/attempts/{attempt_id}` — scoring status, and once `status: "scored"`,
   the full result: `{ overall_score, pitch_score, tone_score, lyrics_score, segments: [...] }`.
   `status`: `scoring` → `scored` | `failed`.
+
+## Deployment
+
+The frontend and backend are packaged as **one Docker image** (`Dockerfile` at the repo root):
+Next.js (`output: "standalone"`) and FastAPI run as separate processes in the same container,
+with Caddy reverse-proxying `/songs/*` to the backend and everything else to the frontend. This
+means one host, one URL, no CORS, and no separate `NEXT_PUBLIC_API_BASE_URL` wiring between two
+services — but it's still a real, always-on server under the hood, so it needs to run somewhere
+with genuine persistent compute, **not** Vercel or another serverless platform (see below).
+
+### Why not Vercel
+
+Vercel runs Python as serverless functions: they freeze immediately after the HTTP response is
+sent, so the `BackgroundTasks` jobs this app depends on (Demucs separation, transcription, scoring)
+would get killed mid-run. The filesystem is also ephemeral, so SQLite and uploaded files wouldn't
+persist. And `torch` + `demucs` + `faster-whisper` alone are hundreds of MB, past Vercel's function
+size limit. None of this is a config problem — the backend needs a persistent server, full stop.
+
+### Resource requirements
+
+Budget **2GB+ RAM**. Loading the Demucs model plus torch's runtime commonly uses 1GB+ during
+separation; smaller instances (Render/Fly/Railway's smallest free or hobby tiers, ~256-512MB)
+will likely OOM-crash on the first real song upload.
+
+### Deploying to an Oracle Cloud "Always Free" VM
+
+Oracle Cloud's Always Free tier is one of the few genuinely permanent free tiers with enough RAM
+for this app (up to 24GB on the ARM Ampere A1 shape).
+
+1. **Create the VM**: [oracle.com/cloud/free](https://www.oracle.com/cloud/free/) → sign up (a
+   card is required for identity verification, but Always Free resources aren't charged) →
+   Compute → Instances → Create Instance. Pick an **Ampere A1 (ARM)** shape, Always Free eligible
+   (e.g. 2 OCPU / 12GB RAM), Ubuntu image, and add your SSH key (`ssh-keygen` if you don't have
+   one). Make sure it's assigned a public IP.
+
+2. **Open port 80** — Oracle Cloud blocks it in *two* places by default, both need fixing:
+   - Cloud-level: the VM's subnet → Security Lists (or Network Security Groups) → add an
+     ingress rule: source `0.0.0.0/0`, TCP, destination port `80`.
+   - VM-level firewall: SSH in and run
+     `sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT && sudo netfilter-persistent save`
+     (Ubuntu images ship with their own iptables rules that block it even after the cloud-level
+     rule is open).
+
+3. **Install Docker** on the VM:
+   ```bash
+   sudo apt update && sudo apt install -y docker.io docker-compose-v2
+   sudo systemctl enable --now docker
+   sudo usermod -aG docker $USER && newgrp docker
+   ```
+
+4. **Deploy**:
+   ```bash
+   git clone https://github.com/chinghar/SoundScorer.git
+   cd SoundScorer
+   docker compose up -d --build
+   ```
+
+5. Visit `http://<VM_PUBLIC_IP>`. First song upload will be slow (models download on first use,
+   cached afterward in the `model_cache` volume so restarts don't re-download them).
+
+To redeploy after pulling new code: `git pull && docker compose up -d --build`.
+
+I haven't been able to test-build or run this image myself (no local Docker available in this
+environment) — the Dockerfile/Caddyfile/compose setup follows standard, well-established patterns,
+but treat the first `docker compose up --build` as the real first test.
 
 ## Known limitations
 

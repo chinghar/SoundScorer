@@ -1,0 +1,15 @@
+services:
+  soundscorer:
+    build: .
+    ports:
+      - "80:80"
+    volumes:
+      - storage:/app/backend/storage
+      # Persists downloaded Demucs/faster-whisper models across restarts -
+      # without this they re-download (~100s of MB) every time the container recreates.
+      - model_cache:/root/.cache
+    restart: unless-stopped
+
+volumes:
+  storage:
+  model_cache:
