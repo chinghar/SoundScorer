@@ -14,3 +14,8 @@ faster-whisper==1.2.1
 # Phase 4: attempt scoring
 dtw-python==1.5.3
 python-Levenshtein==0.26.1
+
+# Audio container decoding (mp3/mp4/webm) without needing a system ffmpeg binary.
+# Was already installed transitively via faster-whisper; pinned explicitly now that
+# app/audio_io.py depends on it directly for song upload normalization.
+av==18.0.0

@@ -58,26 +58,17 @@ export interface AttemptResultResponse {
   segments: SegmentScore[] | null;
 }
 
-// Mirrors backend/app/validation.py so obviously-bad files are rejected before
-// spending a network round-trip; the backend re-validates independently regardless.
+// Mirrors backend/app/validation.py's SONG_ALLOWED_EXTENSIONS so obviously-bad files
+// are rejected before spending a network round-trip; the backend re-validates regardless.
 export const MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
-export const ALLOWED_AUDIO_EXTENSIONS = [
-  ".wav",
-  ".mp3",
-  ".m4a",
-  ".ogg",
-  ".oga",
-  ".flac",
-  ".webm",
-  ".aac",
-];
+export const ALLOWED_AUDIO_EXTENSIONS = [".mp3", ".mp4"];
 
 export function validateAudioFile(file: File): string | null {
   const dotIndex = file.name.lastIndexOf(".");
   const ext = dotIndex >= 0 ? file.name.slice(dotIndex).toLowerCase() : "";
 
   if (!ALLOWED_AUDIO_EXTENSIONS.includes(ext)) {
-    return `Unsupported file type "${ext || "(none)"}". Please upload an audio file (${ALLOWED_AUDIO_EXTENSIONS.join(", ")}).`;
+    return `Unsupported file type "${ext || "(none)"}". Only MP3 or MP4 files are supported.`;
   }
   if (file.size === 0) {
     return "That file is empty.";

@@ -38,7 +38,7 @@ const NETWORK_ERROR_THRESHOLD = 4; // consecutive failures before showing a visi
 
 function Spinner() {
   return (
-    <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-700 dark:border-t-zinc-300" />
+    <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600" />
   );
 }
 
@@ -46,10 +46,27 @@ function BackToUploadLink() {
   return (
     <Link
       href="/"
-      className="text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-black dark:text-zinc-400 dark:hover:text-white"
+      className="text-sm font-medium text-zinc-600 underline underline-offset-4 hover:text-black"
     >
       Upload a different song
     </Link>
+  );
+}
+
+function PrimaryButton({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-full bg-gradient-to-r from-blue-600 to-red-600 px-6 py-3 text-sm font-medium text-white transition-transform hover:scale-105"
+    >
+      {children}
+    </button>
   );
 }
 
@@ -254,138 +271,111 @@ export default function SongPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-zinc-50 px-6 py-16 dark:bg-black">
-      <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-6 py-16">
+      <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">
         Singing Similarity Scorer
       </h1>
 
-      {phase === "loading" && (
-        <div className="flex items-center gap-3">
-          <Spinner />
-          <p className="text-sm text-zinc-500">Loading…</p>
-        </div>
-      )}
-
-      {phase === "processing" && (
-        <div className="flex flex-col items-center gap-3">
+      <div className="flex w-full max-w-md flex-col items-center gap-6 rounded-2xl bg-white/95 p-10 shadow-xl backdrop-blur-sm">
+        {phase === "loading" && (
           <div className="flex items-center gap-3">
             <Spinner />
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {songStatus ? (STAGE_LABELS[songStatus] ?? songStatus) : "Processing…"}
+            <p className="text-sm text-zinc-500">Loading…</p>
+          </div>
+        )}
+
+        {phase === "processing" && (
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-3">
+              <Spinner />
+              <p className="text-sm text-zinc-600">
+                {songStatus ? (STAGE_LABELS[songStatus] ?? songStatus) : "Processing…"}
+              </p>
+            </div>
+            <p className="text-xs text-zinc-400">This can take a minute or two on first run.</p>
+          </div>
+        )}
+
+        {phase === "network_error" && (
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-center text-sm text-red-600">
+              Having trouble reaching the server. Check that the backend is running.
             </p>
+            <PrimaryButton onClick={retryPolling}>Retry</PrimaryButton>
           </div>
-          <p className="text-xs text-zinc-400 dark:text-zinc-600">
-            This can take a minute or two on first run.
-          </p>
-        </div>
-      )}
+        )}
 
-      {phase === "network_error" && (
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-sm text-red-600">
-            Having trouble reaching the server. Check that the backend is running.
-          </p>
-          <button
-            onClick={retryPolling}
-            className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white dark:bg-white dark:text-black"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {phase === "song_failed" && (
-        <div className="flex flex-col items-center gap-4">
-          <p className="max-w-sm text-center text-sm text-red-600">
-            Song processing failed: {error}
-          </p>
-          <BackToUploadLink />
-        </div>
-      )}
-
-      {phase === "ready" && (
-        <button
-          onClick={handleStart}
-          className="rounded-full bg-black px-8 py-4 text-base font-medium text-white transition-transform hover:scale-105 dark:bg-white dark:text-black"
-        >
-          Start
-        </button>
-      )}
-
-      {phase === "countdown" && (
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-sm font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-            Get ready
-          </p>
-          <div
-            key={count}
-            className="animate-[countdown-pop_0.5s_ease-out] text-9xl font-bold text-black dark:text-zinc-50"
-          >
-            {count}
-          </div>
-        </div>
-      )}
-
-      {phase === "recording" && (
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">Recording… sing along!</p>
-          </div>
-          <button
-            onClick={stopRecording}
-            className="rounded-full border border-black px-5 py-2 text-sm font-medium text-black dark:border-white dark:text-white"
-          >
-            Stop early
-          </button>
-        </div>
-      )}
-
-      {phase === "submitting" && (
-        <div className="flex items-center gap-3">
-          <Spinner />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Submitting your recording…</p>
-        </div>
-      )}
-
-      {phase === "mic_error" && (
-        <div className="flex flex-col items-center gap-4">
-          <p className="max-w-sm text-center text-sm text-red-600">{error}</p>
-          <button
-            onClick={handleStart}
-            className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white dark:bg-white dark:text-black"
-          >
-            Try again
-          </button>
-        </div>
-      )}
-
-      {phase === "playback_error" && (
-        <div className="flex flex-col items-center gap-4">
-          <p className="max-w-sm text-center text-sm text-red-600">{error}</p>
-          <button
-            onClick={handleStart}
-            className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white dark:bg-white dark:text-black"
-          >
-            Try again
-          </button>
-        </div>
-      )}
-
-      {phase === "submit_error" && (
-        <div className="flex flex-col items-center gap-4">
-          <p className="max-w-sm text-center text-sm text-red-600">{error}</p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setPhase("ready")}
-              className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white dark:bg-white dark:text-black"
-            >
-              Try again
-            </button>
+        {phase === "song_failed" && (
+          <div className="flex flex-col items-center gap-4">
+            <p className="max-w-sm text-center text-sm text-red-600">
+              Song processing failed: {error}
+            </p>
             <BackToUploadLink />
           </div>
-        </div>
-      )}
+        )}
+
+        {phase === "ready" && <PrimaryButton onClick={handleStart}>Start</PrimaryButton>}
+
+        {phase === "countdown" && (
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm font-medium uppercase tracking-widest text-zinc-500">
+              Get ready
+            </p>
+            <div
+              key={count}
+              className="animate-[countdown-pop_0.5s_ease-out] bg-gradient-to-br from-blue-600 to-red-600 bg-clip-text text-9xl font-bold text-transparent"
+            >
+              {count}
+            </div>
+          </div>
+        )}
+
+        {phase === "recording" && (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+              <p className="text-sm text-zinc-600">Recording… sing along!</p>
+            </div>
+            <button
+              onClick={stopRecording}
+              className="rounded-full border border-zinc-400 px-5 py-2 text-sm font-medium text-zinc-700 hover:border-zinc-600"
+            >
+              Stop early
+            </button>
+          </div>
+        )}
+
+        {phase === "submitting" && (
+          <div className="flex items-center gap-3">
+            <Spinner />
+            <p className="text-sm text-zinc-600">Submitting your recording…</p>
+          </div>
+        )}
+
+        {phase === "mic_error" && (
+          <div className="flex flex-col items-center gap-4">
+            <p className="max-w-sm text-center text-sm text-red-600">{error}</p>
+            <PrimaryButton onClick={handleStart}>Try again</PrimaryButton>
+          </div>
+        )}
+
+        {phase === "playback_error" && (
+          <div className="flex flex-col items-center gap-4">
+            <p className="max-w-sm text-center text-sm text-red-600">{error}</p>
+            <PrimaryButton onClick={handleStart}>Try again</PrimaryButton>
+          </div>
+        )}
+
+        {phase === "submit_error" && (
+          <div className="flex flex-col items-center gap-4">
+            <p className="max-w-sm text-center text-sm text-red-600">{error}</p>
+            <div className="flex items-center gap-4">
+              <PrimaryButton onClick={() => setPhase("ready")}>Try again</PrimaryButton>
+              <BackToUploadLink />
+            </div>
+          </div>
+        )}
+      </div>
 
       {assets?.instrumental_url && (
         <audio

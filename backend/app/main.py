@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from app.audio_io import convert_to_wav
 from app.database import Base, engine, get_db
 from app.jobs import process_song, score_attempt_job
 from app.models import Attempt, Song
@@ -18,7 +19,12 @@ from app.schemas import (
     UploadResponse,
 )
 from app.storage import attempt_dir, attempt_result_path, song_dir
-from app.validation import save_upload_with_limit, validate_extension
+from app.validation import (
+    ATTEMPT_ALLOWED_EXTENSIONS,
+    SONG_ALLOWED_EXTENSIONS,
+    save_upload_with_limit,
+    validate_extension,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -44,7 +50,7 @@ def upload_song(
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
-    ext = validate_extension(file.filename)
+    ext = validate_extension(file.filename, SONG_ALLOWED_EXTENSIONS)
 
     song = Song(filename=file.filename, status="pending")
     db.add(song)
@@ -53,14 +59,28 @@ def upload_song(
 
     dest_dir = song_dir(song.id)
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_path = dest_dir / f"original{ext}"
+    raw_path = dest_dir / f"upload{ext}"
+    wav_path = dest_dir / "original.wav"
 
     try:
-        save_upload_with_limit(file, dest_path)
+        save_upload_with_limit(file, raw_path)
+        # Demucs/librosa can't read compressed containers directly (no system ffmpeg),
+        # so normalize every song to a plain WAV up front and store only that.
+        convert_to_wav(raw_path, wav_path)
     except HTTPException:
         db.delete(song)
         db.commit()
         raise
+    except Exception:
+        logger.exception("Failed to decode uploaded song for song_id=%s", song.id)
+        wav_path.unlink(missing_ok=True)
+        db.delete(song)
+        db.commit()
+        raise HTTPException(
+            status_code=400, detail="Couldn't read that file as audio. Please try a different file."
+        )
+    finally:
+        raw_path.unlink(missing_ok=True)
 
     background_tasks.add_task(process_song, song.id)
 
@@ -133,7 +153,7 @@ def upload_attempt(
         raise HTTPException(status_code=404, detail="Song not found")
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
-    ext = validate_extension(file.filename)
+    ext = validate_extension(file.filename, ATTEMPT_ALLOWED_EXTENSIONS)
 
     attempt = Attempt(song_id=song_id, filename=file.filename, status="scoring")
     db.add(attempt)

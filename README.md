@@ -52,7 +52,7 @@ default (override with `NEXT_PUBLIC_API_BASE_URL` if the backend runs elsewhere)
 ## Try it
 
 1. Start both servers above.
-2. Open `http://localhost:3000`, upload an audio file (wav/mp3/m4a/ogg/flac/aac/webm, ≤50MB).
+2. Open `http://localhost:3000`, drag and drop (or click to browse) a song — MP3 or MP4, ≤50MB.
 3. Wait for processing (separating → analyzing pitch → transcribing → ready).
 4. Click Start, allow microphone access, sing along through the 3-2-1 countdown.
 5. Recording stops automatically when the song ends and is submitted for scoring.
@@ -75,7 +75,9 @@ Recordings that are too short or near-silent are rejected with a clear error rat
 ## API
 
 - `POST /songs/upload` — multipart form, field `file`. Returns `{ song_id, status }`.
-  Rejects non-audio extensions, empty files, and files over 50MB with a 400 + clear message.
+  Only `.mp3`/`.mp4` are accepted; rejects other extensions, empty files, and files over 50MB
+  with a 400 + clear message. Accepted files are normalized to a plain WAV (`original.wav`)
+  before processing, since Demucs/librosa can't read compressed containers directly.
 - `GET /songs/{song_id}/status` — `{ song_id, status, error_message, created_at }`.
   `status`: `pending` → `separating` → `analyzing_pitch` → `transcribing` → `ready` | `failed`.
 - `GET /songs/{song_id}/assets` — instrumental URL, duration, and which reference artifacts exist.

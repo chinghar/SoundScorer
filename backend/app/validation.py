@@ -3,18 +3,22 @@ from pathlib import Path
 from fastapi import HTTPException, UploadFile
 
 MAX_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB, generous for a few minutes of audio
-ALLOWED_AUDIO_EXTENSIONS = {".wav", ".mp3", ".m4a", ".ogg", ".oga", ".flac", ".webm", ".aac"}
 UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB
 
+# Songs are user-picked files, restricted to what the product intentionally supports.
+SONG_ALLOWED_EXTENSIONS = {".mp3", ".mp4"}
+# Attempts are always the browser's own MediaRecorder output, never a user file picker.
+ATTEMPT_ALLOWED_EXTENSIONS = {".webm"}
 
-def validate_extension(filename: str) -> str:
-    """Returns the lowercased extension if it looks like audio, else raises a 400."""
+
+def validate_extension(filename: str, allowed: set[str]) -> str:
+    """Returns the lowercased extension if it's in `allowed`, else raises a 400."""
     ext = Path(filename).suffix.lower()
-    if ext not in ALLOWED_AUDIO_EXTENSIONS:
-        allowed = ", ".join(sorted(ALLOWED_AUDIO_EXTENSIONS))
+    if ext not in allowed:
+        allowed_str = ", ".join(sorted(allowed))
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type '{ext or '(none)'}'. Allowed types: {allowed}.",
+            detail=f"Unsupported file type '{ext or '(none)'}'. Allowed types: {allowed_str}.",
         )
     return ext
 

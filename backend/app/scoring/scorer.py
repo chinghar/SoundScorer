@@ -7,7 +7,7 @@ import soundfile as sf
 
 from app.audio_pipeline import compute_pitch_points_from_signal, transcribe_words
 from app.scoring import config as cfg
-from app.scoring.audio_io import load_audio
+from app.audio_io import load_audio
 from app.scoring.lyrics import score_lyrics
 from app.scoring.pitch import score_pitch
 from app.scoring.segments import score_segments
