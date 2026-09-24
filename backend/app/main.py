@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 
 import soundfile as sf
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, UploadFile
@@ -33,9 +34,15 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Singing Similarity Scorer API")
 
+# Defaults to the local Next.js dev server; override with a comma-separated list
+# (e.g. "https://app.example.com,https://staging.example.com") for other deployments,
+# since a hardcoded localhost origin silently blocks any non-local frontend.
+_cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+allow_origins = [origin.strip() for origin in _cors_origins.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
