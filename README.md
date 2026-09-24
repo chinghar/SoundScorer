@@ -162,3 +162,4 @@ but treat the first `docker compose up --build` as the real first test.
 - CORS is locked to `http://localhost:3000`; update `backend/app/main.py` if you serve the
   frontend from elsewhere.
 <!-- doc pass 1 -->
+<!-- doc pass 2 -->
