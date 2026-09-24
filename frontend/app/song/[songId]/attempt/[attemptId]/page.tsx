@@ -12,8 +12,11 @@ const POLL_INTERVAL_MS = 1500;
 const NETWORK_ERROR_THRESHOLD = 4; // consecutive failures before showing a visible error
 
 function formatTime(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = Math.round(sec % 60);
+  // Round the total first so e.g. 59.6 -> "1:00" instead of the un-rounded
+  // minute/second split producing an invalid "0:60".
+  const total = Math.round(sec);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
