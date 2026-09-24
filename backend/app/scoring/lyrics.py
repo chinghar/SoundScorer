@@ -15,7 +15,10 @@ def _encode(words: list[str], vocab: dict[str, str]) -> str:
     for w in words:
         key = w.strip().lower()
         if key not in vocab:
-            vocab[key] = chr(0x400 + len(vocab))
+            # 0xE000 is the start of the actual Unicode Private Use Area (0x400 is
+            # Cyrillic); using real PUA code points avoids any chance of colliding
+            # with normal text if this is ever logged, printed, or compared elsewhere.
+            vocab[key] = chr(0xE000 + len(vocab))
         chars.append(vocab[key])
     return "".join(chars)
 
