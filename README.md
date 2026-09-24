@@ -161,3 +161,4 @@ but treat the first `docker compose up --build` as the real first test.
 - No auth, accounts, or history — every song/attempt is anonymous and world-readable by ID.
 - CORS is locked to `http://localhost:3000`; update `backend/app/main.py` if you serve the
   frontend from elsewhere.
+<!-- doc pass 1 -->
