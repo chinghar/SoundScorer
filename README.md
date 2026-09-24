@@ -166,3 +166,4 @@ but treat the first `docker compose up --build` as the real first test.
 <!-- doc pass 3 -->
 <!-- doc pass 4 -->
 <!-- doc pass 5 -->
+<!-- doc pass 6 -->
