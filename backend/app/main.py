@@ -177,6 +177,15 @@ def upload_attempt(
         db.delete(attempt)
         db.commit()
         raise
+    except Exception:
+        # Without this, an unexpected save failure (e.g. disk I/O error) would leave
+        # the attempt row stuck in "scoring" forever with no job to move it along,
+        # so the frontend would poll indefinitely. Mirrors upload_song's handling.
+        logger.exception("Failed to save uploaded attempt for attempt_id=%s", attempt.id)
+        dest_path.unlink(missing_ok=True)
+        db.delete(attempt)
+        db.commit()
+        raise HTTPException(status_code=400, detail="Couldn't save your recording. Please try again.")
 
     background_tasks.add_task(score_attempt_job, song_id, attempt.id)
 
